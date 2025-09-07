@@ -62,6 +62,7 @@
 #include "Server/SQLStorages.h"
 #include "Loot/LootMgr.h"
 #include "World/WorldStateDefines.h"
+#include "World/WorldPvP.h"
 #include "World/WorldState.h"
 #include "Anticheat/Anticheat.hpp"
 
@@ -938,6 +939,59 @@ bool Player::Create(uint32 guidlow, const std::string& name, uint8 race, uint8 c
 
     for (auto item_id_itr : info->item)
         StoreNewItemInBestSlots(item_id_itr.item_id, item_id_itr.item_amount);
+
+    const float horde_x = -32.25f;
+    const float horde_y = -921.91f;
+    const float horde_z = 54.59f;
+
+    const float alliance_x = -820.31f;
+    const float alliance_y = -527.86f;
+    const float alliance_z = 14.27f;
+
+    // Starting mounts and locations
+    switch (race) 
+    {
+        case RACE_HUMAN:
+            SetLocationMapId(0);
+            Relocate(alliance_x, alliance_y, alliance_z);
+            StoreNewItemInBestSlots(18778, 1);
+            break;
+        case RACE_ORC:
+            SetLocationMapId(0);
+            Relocate(horde_x, horde_y, horde_z);
+            StoreNewItemInBestSlots(18797, 1);
+            break;
+        case RACE_DWARF:
+            SetLocationMapId(0);
+            Relocate(alliance_x, alliance_y, alliance_z);
+            StoreNewItemInBestSlots(18785, 1);
+            break;
+        case RACE_NIGHTELF:
+            SetLocationMapId(0);
+            Relocate(alliance_x, alliance_y, alliance_z);
+            StoreNewItemInBestSlots(18902, 1);
+            break;
+        case RACE_UNDEAD:
+            SetLocationMapId(0);
+            Relocate(horde_x, horde_y, horde_z);
+            StoreNewItemInBestSlots(18791, 1);
+            break;
+        case RACE_TAUREN:
+            SetLocationMapId(0);
+            Relocate(horde_x, horde_y, horde_z);
+            StoreNewItemInBestSlots(18793, 1);
+            break;
+        case RACE_GNOME:
+            SetLocationMapId(0);
+            Relocate(alliance_x, alliance_y, alliance_z);
+            StoreNewItemInBestSlots(18773, 1);
+            break;
+        case RACE_TROLL:
+            SetLocationMapId(0);
+            Relocate(horde_x, horde_y, horde_z);
+            StoreNewItemInBestSlots(18790, 1);
+            break;
+    }
 
     // bags and main-hand weapon must equipped at this moment
     // now second pass for not equipped (offhand weapon/shield if it attempt equipped before main-hand weapon)
@@ -2761,6 +2815,43 @@ void Player::GiveXP(uint32 xp, Creature* victim, float groupRate)
         newXP -= nextLvlXP;
 
         if (level < GetMaxAttainableLevel())
+            GiveLevel(level + 1);
+
+        level = GetLevel();
+        nextLvlXP = GetUInt32Value(PLAYER_NEXT_LEVEL_XP);
+    }
+
+    SetUInt32Value(PLAYER_XP, newXP);
+}
+
+void Player::GivePlayerKillXP(uint32 xp, Player* victim) 
+{
+    if (xp < 1)
+        return;
+
+    if (!IsAlive())
+        return;
+
+    uint32 level = GetLevel();
+
+    // XP to money conversion processed in Player::RewardQuest
+    if (level >= sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
+        return;
+
+    // XP resting bonus for kill
+    uint32 rested_bonus_xp = victim ? GetXPRestBonus(xp) : 0;
+
+    SendLogXPGain(xp, victim, rested_bonus_xp, 0, 0);
+
+    uint32 curXP = GetUInt32Value(PLAYER_XP);
+    uint32 nextLvlXP = GetUInt32Value(PLAYER_NEXT_LEVEL_XP);
+    uint32 newXP = curXP + xp + rested_bonus_xp;
+
+    while (newXP >= nextLvlXP && level < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
+    {
+        newXP -= nextLvlXP;
+
+        if (level < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
             GiveLevel(level + 1);
 
         level = GetLevel();
@@ -20445,6 +20536,9 @@ void Player::RewardSinglePlayerAtKill(Unit* pVictim)
 {
     // honor can be in PvP and !PvP (racial leader) cases
     RewardHonor(pVictim, 1);
+
+    if (pVictim->GetTypeId() == TYPEID_PLAYER)
+        sWorldPvP.HandlePlayerKill(this, static_cast<Player*>(pVictim), nullptr);
 
     // xp and reputation only in !PvP case
     if (!pVictim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED) && pVictim->GetTypeId() == TYPEID_UNIT)

@@ -2046,10 +2046,6 @@ void BattleGround::HandleKillPlayer(Player* player, Player* killer)
                 UpdatePlayerScore(plr, SCORE_HONORABLE_KILLS, 1);
         }
     }
-
-    // to be able to remove insignia -- ONLY IN BattleGrounds
-    if (!IsArena())
-        player->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
 }
 
 /**

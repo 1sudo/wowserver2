@@ -63,6 +63,7 @@
 #include "Tools/CharacterDatabaseCleaner.h"
 #include "Entities/CreatureLinkingMgr.h"
 #include "Weather/Weather.h"
+#include "World/WorldPvP.h"
 #include "World/WorldState.h"
 #include "Cinematics/CinematicMgr.h"
 #include "Maps/TransportMgr.h"
@@ -1497,6 +1498,8 @@ void World::SetInitialWorldSettings()
     auctionbot.Init();
 #endif
 #endif
+
+    sWorldPvP.LoadWorldPvPLootMap();
 
     sLog.outString("---------------------------------------");
     sLog.outString("      CMANGOS: World initialized       ");

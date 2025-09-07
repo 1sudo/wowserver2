@@ -33,6 +33,7 @@
 #include "Maps/MapPersistentStateMgr.h"
 #include "Spells/SpellAuras.h"
 #include "BattleGround/BattleGroundMgr.h"
+#include "World/WorldPvP.h"
 #ifdef BUILD_DEPRECATED_PLAYERBOT
 #include "PlayerBot/Base/PlayerbotMgr.h"
 #endif
@@ -1576,14 +1577,21 @@ void Group::RewardGroupAtKill(Unit* pVictim, Player* player_tap)
             if (!pGroupGuy->IsAtGroupRewardDistance(pVictim))
                 continue;                               // member (alive or dead) or his corpse at req. distance
 
+            if (pVictim->GetTypeId() == TYPEID_PLAYER)
+                sWorldPvP.HandlePlayerKill(pGroupGuy, static_cast<Player*>(pVictim), this);
+
             RewardGroupAtKill_helper(pGroupGuy, pVictim, count, PvP, group_rate, sum_level, is_dungeon, not_gray_member_with_max_level, member_with_max_level, xp);
         }
 
         if (player_tap)
         {
             // member (alive or dead) or his corpse at req. distance
-            if (player_tap->IsAtGroupRewardDistance(pVictim))
+            if (player_tap->IsAtGroupRewardDistance(pVictim)) {
+                if (pVictim->GetTypeId() == TYPEID_PLAYER)
+                    sWorldPvP.HandlePlayerKill(player_tap, static_cast<Player*>(pVictim), this);
+
                 RewardGroupAtKill_helper(player_tap, pVictim, count, PvP, group_rate, sum_level, is_dungeon, not_gray_member_with_max_level, member_with_max_level, xp);
+            }
         }
     }
 }

@@ -991,6 +991,7 @@ class Player : public Unit
 
 
         void GiveXP(uint32 xp, Creature* victim, float groupRate = 1.f);
+        void GivePlayerKillXP(uint32 xp, Player* victim);
         void GiveLevel(uint32 level);
 
         void InitStatsForLevel(bool reapplyMods = false);
