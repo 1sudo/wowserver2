@@ -2,6 +2,7 @@
 #include "Entities/Item.h"
 #include "Entities/Player.h"
 #include "Chat/Chat.h"
+#include "Groups/Group.h"
 #include <vector>
 
 INSTANTIATE_SINGLETON_1(WorldPvP);
@@ -27,7 +28,11 @@ std::map<int, std::vector<WorldPvPLootItem>> EpicWorldPvPLootTable;
 const static float UNCOMMON_RATIO = 0.4f;
 const static float RARE_RATIO = 0.08f;
 const static float EPIC_RATIO = 0.03f;
-const static float GOLD_REWARD_RATIO = 0.3f;
+const static float RAID_GROUP_MONEY_REWARD_RATIO = 0.975f;
+const static float NON_RAID_GROUP_MONEY_REWARD_RATIO = 0.9f;
+const static float PVP_XP_RATIO = 0.25f;
+const static float PVP_XP_OFFSET_A = 950.0f;
+const static float PVP_XP_OFFSET_B = 1000.0f;
 
 static std::random_device rd;
 static std::mt19937 gen(rd());
@@ -105,28 +110,35 @@ void WorldPvP::HandlePlayerKill(Player* attacker, Player* victim, Group* group)
     }
 
     GetRandomPvPReward(attacker);
-    attacker->GivePlayerKillXP(attacker->GetLevel() * urand(950, 1000), victim);
+    attacker->GivePlayerKillXP(attacker->GetLevel() * urand(PVP_XP_OFFSET_A * PVP_XP_RATIO, PVP_XP_OFFSET_B * PVP_XP_RATIO), victim);
 
     if (group) 
     {
         GroupReference* itr = group->GetFirstMember();
 
-        float numGroupMembers = 1.0f;
+        float groupMemberCount = 1.0f;
         while (itr->hasNext()) 
         {
-            numGroupMembers++;
+            groupMemberCount++;
         }
 
-        const float ratio = 1.0 - (numGroupMembers / MAX_RAID_SIZE) * 0.975;
+        float rewardRatio = 0.f;
 
-        attacker->ModifyMoney((float)(victim->GetLevel() * 100) * ratio);
+        if (group->IsRaidGroup()) 
+        {
+            rewardRatio = 1.0 - (groupMemberCount / MAX_RAID_SIZE) * RAID_GROUP_MONEY_REWARD_RATIO;
+        }
+        else 
+        {
+            rewardRatio = 1.0 - (groupMemberCount / MAX_GROUP_SIZE) * NON_RAID_GROUP_MONEY_REWARD_RATIO;
+        }
+
+        attacker->ModifyMoney((float)(victim->GetLevel() * 100) * rewardRatio);
     } 
     else 
     {
         attacker->ModifyMoney(victim->GetLevel() * 100);
     }
-
-    // WorldPacket data(SMSG_LOOT_MONEY_NOTIFY, 4);
 }
 
 bool WorldPvP::GetRandomPvPReward(Player* attacker) 
